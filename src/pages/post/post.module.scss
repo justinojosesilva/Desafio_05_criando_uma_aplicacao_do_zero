@@ -1,1 +1,30 @@
-// TODO
+.banner {
+    width: 100%;
+    margin: 0px;
+    height: 25rem;
+    background: #C4C4C4;
+    margin-bottom: 5rem;
+    
+    img {
+        width: 100%;
+        height: 25rem;
+
+    }
+}
+
+.title {
+   font-style: normal;
+   font-weight: bold;
+   font-size: 3rem; 
+   line-height: 3.625rem;
+   letter-spacing: -0.031rem;
+
+   color: var(--Heading);
+}
+
+.content {
+    margin-top: 4rem;
+    margin-bottom: 4rem;
+    text-align: justify;
+    color: var(--Heading);
+}

@@ -1,1 +1,58 @@
-// TODO
+.logo {
+    width: 100%;
+    margin-top: 4.972rem;
+    margin-bottom: 4.051rem;
+    img {
+        width: 14.914rem;
+        height: 1.602rem;
+    }
+}
+
+.containerPost {
+
+    width: 100%;
+    margin-bottom: 3rem;
+
+    h1 {
+        font-style: normal;
+        font-weight: bold;
+        font-size: 1.75rem;
+        line-height: 2.125rem;
+
+        text-align: justify;
+        letter-spacing: -0.031rem;
+
+        color: var(--Heading);
+    }
+
+    p {
+        margin-top: 0.5rem;
+        font-style: normal;
+        font-weight: 400;
+        font-size: 1.125rem;
+        line-height: 1.375rem;
+
+        text-align: justify;
+    }
+
+}
+
+.containerLink {
+    margin-top: 4rem;
+    margin-bottom: 4rem;
+
+    a {
+        color: var(--Highlight);
+        font-style: normal;
+        font-weight: 600;
+        font-size: 1.125rem;
+        line-height: 1.375rem;
+        text-align: justify;
+
+        cursor: pointer;
+    }
+}
+
+.containerLinkDisabled {
+    display: none;
+}
