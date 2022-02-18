@@ -3,18 +3,20 @@ import { ptBR } from 'date-fns/locale';
 import { GetStaticPaths, GetStaticProps } from 'next';
 import Prismic from '@prismicio/client';
 import Head from 'next/head';
+import Link from "next/link";
 import { FiCalendar, FiClock, FiUser } from 'react-icons/fi';
 import Header from '../../components/Header';
-import PrismicDOM, { RichText } from "prismic-dom";
+import { RichText } from "prismic-dom";
 import { getPrismicClient } from '../../services/prismic';
 
 import commonStyles from '../../styles/common.module.scss';
 import styles from './post.module.scss';
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import Comments from '../../components/Comments';
 
 interface Post {
   first_publication_date: string | null;
+  last_publication_date: string | null;
   data: {
     title: string;
     banner: {
@@ -30,19 +32,30 @@ interface Post {
   };
 }
 
-interface PostProps {
-  post: Post;
+interface  NextPost {
+  uid: string;
+  title: string;
 }
 
-export default function Post({post}: PostProps) {
+interface  PreviousPost {
+  uid: string;
+  title: string;
+}
+
+interface PostProps {
+  post: Post;
+  preview;
+  next_post?: NextPost;
+  previous_post?: PreviousPost; 
+}
+
+export default function Post({ post, preview, next_post, previous_post }: PostProps) {
 
   const router = useRouter();
   
   let list: string[] = [];
   post.data.content.map((text) => {
-    const newListHeading = text.heading.split(/\W/) 
     const newListBody = RichText.asText(text.body).split(/\W/);
-    newListHeading.map(item => list.push(item));
     newListBody.map(item => list.push(item));
     return list;
   });
@@ -52,8 +65,6 @@ export default function Post({post}: PostProps) {
     time: Math.round((list.length/200)),
   }
 
-  //time_learnig: ,
-
   return (
     
     <>
@@ -62,29 +73,70 @@ export default function Post({post}: PostProps) {
       ) : (
         <>
           <Head>
-            <title>{post.data.title}</title>
+            <title>{RichText.asText(postAlt.data.title)}</title>
           </Head>
           <Header />
           <div className={styles.banner}>
             <img src={postAlt.data.banner.url} alt="banner"/>
           </div>
           <main className={commonStyles.container}>
-            <h1 className={styles.title}>{postAlt.data.title}</h1>
+            <h1 className={styles.title}>{RichText.asText(postAlt.data.title)}</h1>
             <div className={commonStyles.info}>
               <span><FiCalendar /> {format(new Date(postAlt.first_publication_date),"d MMM y", {locale: ptBR})}</span> 
-              <span><FiUser /> {postAlt.data.author}</span>
+              <span><FiUser /> {RichText.asText(postAlt.data.author)}</span>
               <span><FiClock /> {postAlt.time} min</span> 
             </div>
+            {post.last_publication_date && (
+              <div className={styles.postEdit}>
+                <span>{`* editado em ${format(new Date(postAlt.last_publication_date),"d MMM y", {locale: ptBR})}, às ${format(new Date(postAlt.last_publication_date),"h:mm a", {locale: ptBR})} `}</span>
+              </div>
+            )}
+
             {postAlt.data.content.map(item => (
               <div key={item.heading} className={styles.content}>
-                <h2>{item.heading}</h2>
+                <h2>{RichText.asText(item.heading)}</h2>
                 {item.body.map(itemBody => (
-                  <div key={itemBody.text.length}  
+                  <div key={itemBody.text}
                     dangerouslySetInnerHTML={{ __html: itemBody.text }}
                   />
                 ))}
               </div>
             ))}
+            <hr />
+
+            <div className={styles.linkPosts}>
+              {previous_post && (
+                <div>
+                  <p>{RichText.asText(previous_post.title)}</p>
+                  <Link href={`/post/${previous_post.uid}`} >
+                    <a>Post Anterior</a>
+                  </Link>
+                </div>
+              )}
+
+              <div className={styles.linkLeft}>
+                {next_post && (
+                  <>
+                    <p>{RichText.asText(next_post.title)}</p>
+                    <Link href={`/post/${next_post.uid}`} >
+                      <a href=''>Próximo post</a>
+                    </Link>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <Comments />
+
+
+            {preview && (
+              <aside className={commonStyles.preview}>
+                <Link href="/api/exit-preview">
+                  <a>Sair do modo Preview</a>
+                </Link>
+              </aside>
+            )}
+
           </main>
         </>          
       )
@@ -93,7 +145,7 @@ export default function Post({post}: PostProps) {
   )
 }
 
-export const getStaticPaths = async () => {
+export const getStaticPaths: GetStaticPaths = async () => {
   const prismic = getPrismicClient();
   const posts = await prismic.query(
     Prismic.Predicates.at('document.type','posts'),
@@ -118,12 +170,49 @@ export const getStaticPaths = async () => {
   }
 };
 
-export const getStaticProps: GetStaticProps = async context => {
-  const { slug } = context.params;
-  const prismic = getPrismicClient();
-  const response = await prismic.getByUID('posts', String(slug), {});
+export const getStaticProps: GetStaticProps = async ({
+  params,
+  preview = false,
+  previewData
+}) => {
+  let uidNext: string;
+  let titleNext: string;
+  let uidPreview: string;
+  let titlePreview: string;
+  const { slug } = params;
 
-  const { data, first_publication_date, uid } = response;
+  const prismic = getPrismicClient();
+  const response = await prismic.getByUID('posts', String(slug), { ref: previewData?.ref ?? null  });
+  const { data, first_publication_date, last_publication_date, uid, id } = response;
+  
+  const nextpost = await prismic.query(
+    [Prismic.Predicates.at('document.type', 'posts')], 
+    { 
+      pageSize : 1 , 
+      orderings: '[document.first_publication_date]',
+      after : id, 
+    });
+  const previewPost = await prismic.query(
+    [Prismic.Predicates.at('document.type', 'posts')], 
+    { 
+      pageSize : 1 , 
+      after : id, 
+      orderings: '[document.first_publication_date desc]' 
+    });
+
+  const { results } = nextpost;
+
+  const { results: resultsPreview } = previewPost;
+
+  results && results.find((next) => {    
+    uidNext= next.uid;
+    titleNext= next.data.title;    
+  })
+
+  resultsPreview && resultsPreview.find((preview) => {    
+    uidPreview= preview.uid;
+    titlePreview= preview.data.title;    
+  })
 
   const newContent = data.content.map(item => {
     const bd = item.body.map(ib => ib);
@@ -134,11 +223,14 @@ export const getStaticProps: GetStaticProps = async context => {
     }
   });
 
+  console.log(last_publication_date);
+
   return {
     props: {
       post: {
         uid,
         first_publication_date,
+        last_publication_date: last_publication_date !== ''? last_publication_date: null,
         data: {
           title: data.title,
           subtitle: data.subtitle,
@@ -147,9 +239,17 @@ export const getStaticProps: GetStaticProps = async context => {
           },
           author: data.author,
           content: newContent,
-        }, 
-        
-      }
+        },         
+      },
+      next_post: uidNext && titleNext ? {
+        uid: uidNext, 
+        title: titleNext,
+      }: null,
+      previous_post: uidPreview && titlePreview ? {
+        uid: uidPreview,
+        title: titlePreview,
+      }: null
+
     }
   }
 };

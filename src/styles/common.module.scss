@@ -32,3 +32,28 @@
 		}
 	}
 }
+
+.preview {
+	max-width: 1024px;
+	height: 3.625rem;
+	margin-top: 5.012rem;
+	margin-bottom: 5rem;
+
+	display: flex;
+	align-items: center;
+	justify-content: center;
+
+	background: var(--Heading);
+
+	a {
+		font-style: normal;
+		font-weight: 600;
+		font-size: 1.125rem;
+		line-height: 1.375rem;
+
+		text-align: justify;
+
+		color: var(--Background);
+	}
+
+}

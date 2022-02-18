@@ -12,6 +12,7 @@ import format from 'date-fns/format';
 import { ptBR } from 'date-fns/locale';
 import { useState } from 'react';
 
+
 interface Post {
   uid?: string;
   first_publication_date: string | null;
@@ -29,10 +30,13 @@ interface PostPagination {
 
 interface HomeProps {
   postsPagination: PostPagination;
+  preview: boolean;
 }
 
-export default function Home({ postsPagination }: HomeProps) {
+export default function Home({ postsPagination, preview }: HomeProps) {
   
+  console.log(preview);
+
   const { results, next_page } = postsPagination
 
   const [ posts, setPosts ] = useState<Post[]>(results);
@@ -52,9 +56,9 @@ export default function Home({ postsPagination }: HomeProps) {
         uid: post.uid,
         first_publication_date: post.first_publication_date,
         data: {
-          title: post.data.title,
-          subtitle: post.data.subtitle,
-          author: post.data.author,
+          title: RichText.asText(post.data.title),
+          subtitle: RichText.asText(post.data.subtitle),
+          author: RichText.asText(post.data.author),
         }
       }])
     ))
@@ -90,17 +94,30 @@ export default function Home({ postsPagination }: HomeProps) {
             <a onClick={handleNextPage}>Carregar mais posts</a>
           </div>
         }
+
+        {preview && (
+          <aside className={commonStyles.preview}>
+            <Link href="/api/exit-preview">
+              <a>Sair do modo Preview</a>
+            </Link>
+          </aside>
+        )}
       </main>
     </>
   )
 }
 
-export const getStaticProps: GetStaticProps = async ({ params }) => {
+export const getStaticProps: GetStaticProps = async ({ 
+  preview = false,
+  previewData, 
+}) => {
   const prismic = getPrismicClient();
+
   const postsResponse = await prismic.query(
     Prismic.Predicates.at('document.type','posts'),
     {
-      pageSize: 1
+      pageSize: 1,
+      ref: previewData?.ref ?? null 
     }    
     
   );
@@ -112,9 +129,9 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
       uid: post.uid,
       first_publication_date: post.first_publication_date,
       data: {
-        title: post.data.title,
-        subtitle: post.data.subtitle,
-        author: post.data.author,
+        title: RichText.asText(post.data.title),
+        subtitle: RichText.asText(post.data.subtitle),
+        author: RichText.asText(post.data.author),
       }
     }
   });
@@ -124,7 +141,8 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
       postsPagination: {
         next_page,
         results
-      } 
+      },
+      preview
     }
   }
 };
